@@ -1,50 +1,44 @@
 #!/usr/bin/env python3
-"""Module of session authenticating views.
 """
-import os
-from typing import Tuple
-from flask import abort, jsonify, request
+SessionAuth
+"""
 
+from api.v1.auth.auth import Auth
+from typing import TypeVar
+from uuid import uuid4
 from models.user import User
-from api.v1.views import app_views
 
 
-@app_views.route('/auth_session/login', methods=['POST'], strict_slashes=False)
-def login() -> Tuple[str, int]:
-    """POST /api/v1/auth_session/login
-    Return:
-      - JSON representation of a User object.
+class SessionAuth(Auth):
     """
-    not_found_res = {"error": "no user found for this email"}
-    email = request.form.get('email')
-    if email is None or len(email.strip()) == 0:
-        return jsonify({"error": "email missing"}), 400
-    password = request.form.get('password')
-    if password is None or len(password.strip()) == 0:
-        return jsonify({"error": "password missing"}), 400
-    try:
-        users = User.search({'email': email})
-    except Exception:
-        return jsonify(not_found_res), 404
-    if len(users) <= 0:
-        return jsonify(not_found_res), 404
-    if users[0].is_valid_password(password):
-        from api.v1.app import auth
-        sessiond_id = auth.create_session(getattr(users[0], 'id'))
-        res = jsonify(users[0].to_json())
-        res.set_cookie(os.getenv("SESSION_NAME"), sessiond_id)
-        return res
-    return jsonify({"error": "wrong password"}), 401
-
-@app_views.route(
-    '/auth_session/logout', methods=['DELETE'], strict_slashes=False)
-def logout() -> Tuple[str, int]:
-    """DELETE /api/v1/auth_session/logout
-    Return:
-      - An empty JSON object.
+    Session auth class
     """
-    from api.v1.app import auth
-    is_destroyed = auth.destroy_session(request)
-    if not is_destroyed:
-        abort(404)
-    return jsonify({})
+    user_id_by_session_id = {}
+
+    def create_session(self, user_id: str = None) -> str:
+        """
+        creates a Session ID for a user_id
+        """
+        if not user_id or type(user_id) != str:
+            return
+        session_id = str(uuid4())
+        SessionAuth.user_id_by_session_id[user_id] = session_id
+        return session_id
+
+    def user_id_for_session_id(self, session_id: str = None) -> str:
+        """
+        returns a User ID based on a Session ID
+        """
+        if not session_id or type(session_id) != str:
+            return
+        return SessionAuth.user_id_by_session_id.get(session_id, None)
+
+    def current_user(self, request=None) -> TypeVar('User'):
+        """
+        current_user.
+        """
+        if request:
+            session_cookie = self.session_cookie(request)
+            if session_cookie:
+                user_id = self.user_id_for_session_id(session_cookie)
+                return User.get(user_id)
