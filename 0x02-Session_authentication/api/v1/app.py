@@ -54,14 +54,17 @@ def authenticate_user():
             '/api/v1/status/',
             '/api/v1/unauthorized/',
             '/api/v1/forbidden/',
+            '/api/v1/auth_session/login/',
+            '/api/v1/users',
         ]
 
         if auth.require_auth(request.path, excluded_paths):
             auth_header = auth.authorization_header(request)
             user = auth.current_user(request)
-            session_cookie = auth.session_cookie(request)
-            if session_cookie is None:
-                abort(401)
+            if auth_type == 'session_auth':
+                session_cookie = auth.session_cookie(request)
+                if session_cookie is None:
+                    abort(401)
             if auth.authorization_header(request) is None:
                 abort(401)
             if user is None:
