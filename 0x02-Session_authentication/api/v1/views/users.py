@@ -26,7 +26,7 @@ def view_one_user(user_id: str = None) -> str:
       - 404 if the User ID doesn't exist.
     """
 
-    if  user_id == "me":
+    if user_id == "me":
         if not request.current_user:
             abort(404)
         else:
