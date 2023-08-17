@@ -30,6 +30,7 @@ class Auth:
         """Initializes a new Auth instance.
         """
         self._db = DB()
+
     def register_user(self, email: str, password: str) -> User:
         """Adds a new user to the database.
         """
